@@ -1,0 +1,1766 @@
+-- ============================================================
+--  millionware UI Library
+--  Refatorado para legibilidade
+-- ============================================================
+
+-- ────────────────────────────────────────────────────────────
+--  Utilidades de cor
+-- ────────────────────────────────────────────────────────────
+
+local function RGBtoHSV(r, g, b)
+    local max, min = math.max(r, g, b), math.min(r, g, b)
+    local h, s, v = 0, 0, max
+    local delta = max - min
+
+    if max == 0 then
+        s = 0
+    else
+        s = delta / max
+    end
+
+    if max == min then
+        h = 0
+    elseif max == r then
+        h = (g - b) / delta
+        if g < b then h = h + 6 end
+    elseif max == g then
+        h = (b - r) / delta + 2
+    elseif max == b then
+        h = (r - g) / delta + 4
+    end
+    h = h / 6
+
+    return h, s, v
+end
+
+getgenv().color = function(tbl)
+    return Color3.fromRGB(tbl.R * 255, tbl.G * 255, tbl.B * 255)
+end
+
+getgenv().tocolor = function(tbl)
+    return RGBtoHSV(tbl.R, tbl.G, tbl.B)
+end
+
+getgenv().fromcolor = function(c3)
+    return { R = c3.R, G = c3.G, B = c3.B }
+end
+
+-- ────────────────────────────────────────────────────────────
+--  Módulo principal
+-- ────────────────────────────────────────────────────────────
+
+local Library = {}
+
+local ACCENT    = Color3.fromRGB(255, 0, 245)
+local BG_DARK   = Color3.fromRGB(13, 13, 13)
+local BG_MID    = Color3.fromRGB(18, 18, 18)
+local BG_LIGHT  = Color3.fromRGB(24, 24, 24)
+local BG_PANEL  = Color3.fromRGB(27, 27, 27)
+local TEXT_ON   = Color3.fromRGB(255, 255, 255)
+local TEXT_OFF  = Color3.fromRGB(200, 200, 200)
+local TEXT_DIM  = Color3.fromRGB(220, 220, 220)
+local BOX_OFF   = Color3.fromRGB(20, 20, 20)
+
+-- ────────────────────────────────────────────────────────────
+--  Helper: Tween
+-- ────────────────────────────────────────────────────────────
+
+function Library:Tween(instance, info, goal)
+    game:GetService("TweenService"):Create(instance, info, goal):Play()
+end
+
+local TWEEN_FAST = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local TWEEN_MED  = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+-- ────────────────────────────────────────────────────────────
+--  Helper: Draggable
+-- ────────────────────────────────────────────────────────────
+
+local function MakeDraggable(frame)
+    local UIS = game:GetService("UserInputService")
+    local dragging, dragInput, startPos, startFramePos
+
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging      = true
+            startPos      = input.Position
+            startFramePos = frame.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - startPos
+            frame.Position = UDim2.new(
+                startFramePos.X.Scale, startFramePos.X.Offset + delta.X,
+                startFramePos.Y.Scale, startFramePos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+-- ────────────────────────────────────────────────────────────
+--  Watermark
+-- ────────────────────────────────────────────────────────────
+
+local function BuildWatermark()
+    local gui   = Instance.new("ScreenGui")
+    gui.Name    = "Watermark"
+    gui.Parent  = game.CoreGui
+
+    local frame = Instance.new("Frame")
+    frame.Name  = "Loader"
+    frame.Parent = gui
+    frame.Active = true
+    frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    frame.Position = UDim2.new(1, -6, 0, -29)
+    frame.Size     = UDim2.new(0, 203, 0, 25)
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, BG_LIGHT),
+        ColorSequenceKeypoint.new(1, BG_DARK),
+    }
+    gradient.Rotation = 90
+    gradient.Parent   = frame
+
+    local deco = Instance.new("Frame")
+    deco.Name              = "Decoration"
+    deco.Parent            = frame
+    deco.BackgroundColor3  = ACCENT
+    deco.BorderSizePixel   = 0
+    deco.Position          = UDim2.new(0, -1, 0, -1)
+    deco.Size              = UDim2.new(1, 2, 0, 1)
+
+    local inner = Instance.new("Frame")
+    inner.Parent           = frame
+    inner.BackgroundColor3 = Color3.fromRGB(27, 27, 27)
+    inner.BorderSizePixel  = 0
+    inner.Position         = UDim2.new(0, 2, 0, 4)
+    inner.Size             = UDim2.new(1, -4, 1, -7)
+
+    local inner2 = Instance.new("Frame")
+    inner2.Parent           = inner
+    inner2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    inner2.BorderSizePixel  = 0
+    inner2.Position         = UDim2.new(0, 1, 0, 1)
+    inner2.Size             = UDim2.new(1, -2, 1, -2)
+
+    local inner3 = Instance.new("Frame")
+    inner3.Parent           = inner2
+    inner3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    inner3.BorderSizePixel  = 0
+    inner3.Position         = UDim2.new(0, 1, 0, 1)
+    inner3.Size             = UDim2.new(1, -2, 1, -2)
+
+    local gradient2 = Instance.new("UIGradient")
+    gradient2.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, BG_LIGHT),
+        ColorSequenceKeypoint.new(1, BG_DARK),
+    }
+    gradient2.Rotation = 90
+    gradient2.Parent   = inner3
+
+    local label = Instance.new("TextLabel")
+    label.Name                 = "Title"
+    label.Parent               = inner
+    label.BackgroundTransparency = 1
+    label.Position             = UDim2.new(0, 0, 0, 3)
+    label.Size                 = UDim2.new(1, 0, 0, 12)
+    label.Font                 = Enum.Font.Code
+    label.Text                 = "millionware.vip | fps: 60 | build: dev"
+    label.TextColor3           = TEXT_ON
+    label.TextSize             = 14
+    label.TextStrokeTransparency = 0
+
+    -- FPS counter
+    local frameCount  = 0
+    local timeElapsed = 0
+
+    game:GetService("RunService").RenderStepped:Connect(function(dt)
+        frameCount  = frameCount + 1
+        timeElapsed = timeElapsed + dt
+
+        if timeElapsed >= 0.5 then
+            local avgFPS = math.floor(frameCount / timeElapsed)
+            local text   = "millionware.vip | fps:" .. avgFPS .. " | build: dev"
+            local textW  = game:GetService("TextService"):GetTextSize(
+                text, 14, Enum.Font.Code, Vector2.new(700, label.AbsoluteSize.Y)
+            ).X
+
+            frame.Size = UDim2.new(0, -textW - 12, 0, 25)
+            label.Text = text
+            frameCount  = 0
+            timeElapsed = 0
+        end
+    end)
+
+    return gui
+end
+
+-- ────────────────────────────────────────────────────────────
+--  Keylist (Keybinds HUD)
+-- ────────────────────────────────────────────────────────────
+
+local function BuildKeylist()
+    local gui   = Instance.new("ScreenGui")
+    gui.Name    = "keybind"
+    gui.Parent  = game.CoreGui
+    gui.Enabled = false
+
+    local holder = Instance.new("Frame")
+    holder.Name              = "Loader"
+    holder.Parent            = gui
+    holder.Active            = true
+    holder.BackgroundColor3  = Color3.fromRGB(255, 255, 255)
+    holder.Position          = UDim2.new(0.5, -125, 0.5, -81)
+    holder.Size              = UDim2.new(0, 153, 0, 29)
+
+    local gradient = Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, BG_LIGHT),
+        ColorSequenceKeypoint.new(1, BG_DARK),
+    }
+    gradient.Rotation = 90
+    gradient.Parent   = holder
+
+    local deco = Instance.new("Frame")
+    deco.Name             = "Decoration"
+    deco.Parent           = holder
+    deco.BackgroundColor3 = ACCENT
+    deco.BorderSizePixel  = 0
+    deco.Position         = UDim2.new(0, -1, 0, -1)
+    deco.Size             = UDim2.new(1, 2, 0, 1)
+
+    local inner = Instance.new("Frame")
+    inner.Parent           = holder
+    inner.BackgroundColor3 = Color3.fromRGB(27, 27, 27)
+    inner.BorderSizePixel  = 0
+    inner.Position         = UDim2.new(0, 2, 0, 4)
+    inner.Size             = UDim2.new(1, -4, 1, -7)
+
+    local inner2 = Instance.new("Frame")
+    inner2.Parent           = inner
+    inner2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    inner2.BorderSizePixel  = 0
+    inner2.Position         = UDim2.new(0, 1, 0, 1)
+    inner2.Size             = UDim2.new(1, -2, 1, -2)
+
+    local inner3 = Instance.new("Frame")
+    inner3.Parent           = inner2
+    inner3.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    inner3.BorderSizePixel  = 0
+    inner3.Position         = UDim2.new(0, 1, 0, 1)
+    inner3.Size             = UDim2.new(1, -2, 1, -2)
+
+    local gradient2 = Instance.new("UIGradient")
+    gradient2.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, BG_LIGHT),
+        ColorSequenceKeypoint.new(1, BG_DARK),
+    }
+    gradient2.Rotation = 90
+    gradient2.Parent   = inner3
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name                 = "Title"
+    titleLabel.Parent               = inner
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Position             = UDim2.new(0, 0, 0, 5)
+    titleLabel.Size                 = UDim2.new(1, 0, 0, 12)
+    titleLabel.Font                 = Enum.Font.Code
+    titleLabel.Text                 = "Keybinds"
+    titleLabel.TextColor3           = TEXT_ON
+    titleLabel.TextSize             = 14
+    titleLabel.TextStrokeTransparency = 0
+
+    local list = Instance.new("Frame")
+    list.Name                  = "List"
+    list.Parent                = holder
+    list.BackgroundTransparency = 1
+    list.Position              = UDim2.new(-0.005, 0, 1.069, 0)
+    list.Size                  = UDim2.new(1, 0, 5, 0)
+
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    listLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+    listLayout.Parent              = list
+
+    -- Example template (hidden)
+    local example = Instance.new("Frame")
+    example.Name                  = "Example"
+    example.Parent                = gui
+    example.BackgroundTransparency = 1
+    example.Size                  = UDim2.new(1, 0, 0, 15)
+    example.Visible               = false
+
+    local exKeyText = Instance.new("TextLabel")
+    exKeyText.Name                 = "KeyText"
+    exKeyText.Parent               = example
+    exKeyText.BackgroundTransparency = 1
+    exKeyText.Position             = UDim2.new(0.005, 0, 0, 0)
+    exKeyText.Size                 = UDim2.new(0.707, 0, 1, 0)
+    exKeyText.Font                 = Enum.Font.SourceSans
+    exKeyText.Text                 = "Third Person"
+    exKeyText.TextColor3           = TEXT_ON
+    exKeyText.TextSize             = 14
+    exKeyText.TextStrokeTransparency = 0
+    exKeyText.TextXAlignment       = Enum.TextXAlignment.Left
+
+    local exStatus = Instance.new("TextLabel")
+    exStatus.Parent                = example
+    exStatus.BackgroundTransparency = 1
+    exStatus.Position              = UDim2.new(0.383, 0, 0, 0)
+    exStatus.Size                  = UDim2.new(0.622, 0, 1, 0)
+    exStatus.Font                  = Enum.Font.SourceSans
+    exStatus.Text                  = "(on)"
+    exStatus.TextColor3            = TEXT_ON
+    exStatus.TextSize              = 14
+    exStatus.TextStrokeTransparency = 0
+    exStatus.TextXAlignment        = Enum.TextXAlignment.Right
+
+    MakeDraggable(holder)
+
+    return gui, list, example
+end
+
+-- ────────────────────────────────────────────────────────────
+--  Library:New  – constrói a janela principal
+-- ────────────────────────────────────────────────────────────
+
+function Library:New()
+    local Menu = {}
+
+    -- ── Watermark & Keylist ──────────────────────────────────
+    local watermarkGui          = BuildWatermark()
+    local keylistGui, keyList, keylistExample = BuildKeylist()
+
+    Menu.Keylist = {}
+
+    function Menu.Keylist:SetVisible(visible)
+        keylistGui.Enabled = visible
+    end
+
+    function Menu.Keylist:Add(name)
+        if keyList:FindFirstChild(name) then return end
+
+        local row = keylistExample:Clone()
+        row.Name                = name
+        row.KeyText.Text        = name
+        row.Visible             = true
+        row.Parent              = keyList
+    end
+
+    function Menu.Keylist:Remove(name)
+        local row = keyList:FindFirstChild(name)
+        if row then row:Destroy() end
+    end
+
+    function Menu:Watermark(enabled)
+        watermarkGui.Enabled = enabled
+    end
+
+    -- ── ScreenGui ────────────────────────────────────────────
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.DisplayOrder  = 1000
+    screenGui.ResetOnSpawn  = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+    screenGui.Parent        = game.CoreGui
+
+    getgenv().uiopen = true
+    game:GetService("UserInputService").MouseIconEnabled = false
+
+    -- FIX: Toggle UI com RightShift  (sem ficar transparente)
+    game:GetService("UserInputService").InputBegan:Connect(function(input)
+        if input.KeyCode == Enum.KeyCode.RightShift then
+            screenGui.Enabled = not screenGui.Enabled
+            getgenv().uiopen  = screenGui.Enabled
+            game:GetService("UserInputService").MouseIconEnabled = not screenGui.Enabled
+        end
+    end)
+
+    -- ── Cursor customizado ───────────────────────────────────
+    local cursor = Instance.new("ImageLabel")
+    cursor.Name                 = "cursor"
+    cursor.Parent               = screenGui
+    cursor.BackgroundTransparency = 1
+    cursor.Size                 = UDim2.new(0, 17, 0, 17)
+    cursor.Image                = "rbxassetid://518398610"
+    cursor.ZIndex               = 1000
+    cursor.ImageColor3          = ACCENT
+
+    local mouse = game:GetService("Players").LocalPlayer:GetMouse()
+
+    game:GetService("RunService").RenderStepped:connect(function()
+        cursor.Visible = screenGui.Enabled
+        cursor.Position = UDim2.new(0, mouse.X - 3, 0, mouse.Y + 1)
+        if screenGui.Enabled then
+            game:GetService("UserInputService").MouseBehavior = Enum.MouseBehavior.Default
+        end
+    end)
+
+    -- ── Container principal ──────────────────────────────────
+    local mainFrame = Instance.new("ImageLabel")
+    mainFrame.Name                 = "Main"
+    mainFrame.Parent               = screenGui
+    mainFrame.BackgroundTransparency = 1
+    mainFrame.Position             = UDim2.new(0.5, -305, 0.5, -200)
+    mainFrame.Size                 = UDim2.new(0, 610, 0, 400)
+    mainFrame.Image                = "rbxassetid://6115686715"
+    mainFrame.Active               = true
+
+    MakeDraggable(mainFrame)
+
+    -- ── Tab buttons (coluna esquerda) ────────────────────────
+    local tabButtonsFrame = Instance.new("Frame")
+    tabButtonsFrame.Name                  = "TabButtons"
+    tabButtonsFrame.Parent                = mainFrame
+    tabButtonsFrame.BackgroundTransparency = 1
+    tabButtonsFrame.Position              = UDim2.new(0, 13, 0, 115)
+    tabButtonsFrame.Size                  = UDim2.new(0, 123, 0, 250)
+
+    local tabButtonsLayout = Instance.new("UIListLayout")
+    tabButtonsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    tabButtonsLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+    tabButtonsLayout.Padding             = UDim.new(0, 3)
+    tabButtonsLayout.Parent              = tabButtonsFrame
+
+    -- ── Tabs container (area direita) ────────────────────────
+    local tabsContainer = Instance.new("Frame")
+    tabsContainer.Name                  = "Tabs"
+    tabsContainer.Parent                = mainFrame
+    tabsContainer.BackgroundTransparency = 1
+    tabsContainer.BorderSizePixel       = 0
+    tabsContainer.Position              = UDim2.new(0, 139, 0, 35)
+    tabsContainer.Size                  = UDim2.new(0, 456, 0, 350)
+
+    -- ── Exemplos (templates ocultos) ─────────────────────────
+    local examples = Instance.new("Folder")
+    examples.Name   = "Examples"
+    examples.Parent = screenGui
+
+    -- Template: botão de tab
+    local tabButtonTemplate = Instance.new("TextButton")
+    tabButtonTemplate.Name            = "TabButtonExample"
+    tabButtonTemplate.Parent          = examples
+    tabButtonTemplate.BackgroundColor3 = Color3.fromRGB(23, 23, 23)
+    tabButtonTemplate.BorderColor3    = Color3.fromRGB(0, 0, 0)
+    tabButtonTemplate.Size            = UDim2.new(1, 0, 0, 30)
+    tabButtonTemplate.Visible         = false
+    tabButtonTemplate.AutoButtonColor = false
+    tabButtonTemplate.Font            = Enum.Font.SourceSans
+    tabButtonTemplate.Text            = ""
+
+    local tabBtnLabel = Instance.new("TextLabel")
+    tabBtnLabel.Parent               = tabButtonTemplate
+    tabBtnLabel.BackgroundTransparency = 1
+    tabBtnLabel.Position             = UDim2.new(0.089, 0, 0.093, 0)
+    tabBtnLabel.Size                 = UDim2.new(0.887, 0, 0.813, 0)
+    tabBtnLabel.Font                 = Enum.Font.Code
+    tabBtnLabel.Text                 = "Aimbot"
+    tabBtnLabel.TextColor3           = TEXT_ON
+    tabBtnLabel.TextSize             = 14
+    tabBtnLabel.TextStrokeTransparency = 0
+    tabBtnLabel.TextXAlignment       = Enum.TextXAlignment.Left
+
+    local tabBtnBar = Instance.new("Frame")
+    tabBtnBar.Parent           = tabButtonTemplate
+    tabBtnBar.BackgroundColor3 = ACCENT
+    tabBtnBar.BorderSizePixel  = 0
+    tabBtnBar.Position         = UDim2.new(0, 1, 0, 0)
+    tabBtnBar.Size             = UDim2.new(0, 2, 1, 0)
+
+    -- Template: inner tab button
+    local innerTabTemplate = Instance.new("TextButton")
+    innerTabTemplate.Name            = "InnerTabExample"
+    innerTabTemplate.Parent          = examples
+    innerTabTemplate.BackgroundTransparency = 1
+    innerTabTemplate.Size            = UDim2.new(1, 0, 1, 0)
+    innerTabTemplate.Visible         = false
+    innerTabTemplate.AutoButtonColor = false
+    innerTabTemplate.Font            = Enum.Font.SourceSans
+    innerTabTemplate.Text            = "Main"
+    innerTabTemplate.TextColor3      = TEXT_ON
+    innerTabTemplate.TextStrokeTransparency = 0
+
+    local innerTabDeco = Instance.new("Frame")
+    innerTabDeco.Name             = "Decoration"
+    innerTabDeco.Parent           = innerTabTemplate
+    innerTabDeco.BackgroundColor3 = ACCENT
+    innerTabDeco.BorderSizePixel  = 0
+    innerTabDeco.Position         = UDim2.new(0, 1, 1, -1)
+    innerTabDeco.Size             = UDim2.new(1, 0, 0, 1)
+
+    local innerTabDivider = Instance.new("Frame")
+    innerTabDivider.Name             = "Divider"
+    innerTabDivider.Parent           = innerTabTemplate
+    innerTabDivider.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    innerTabDivider.BorderSizePixel  = 0
+    innerTabDivider.Position         = UDim2.new(1, 0, 0, 0)
+    innerTabDivider.Size             = UDim2.new(0, 1, 1, 0)
+
+    -- Container de conteúdo do inner tab
+    local innerTabContent = Instance.new("Frame")
+    innerTabContent.Parent               = innerTabTemplate
+    innerTabContent.BackgroundTransparency = 1
+    innerTabContent.BorderSizePixel      = 0
+    innerTabContent.Position             = UDim2.new(0, -1, 0, 20)
+    innerTabContent.Size                 = UDim2.new(0, 456, 0, 328)
+
+    local leftColumn = Instance.new("Frame")
+    leftColumn.Name                  = "Left"
+    leftColumn.Parent                = innerTabContent
+    leftColumn.BackgroundTransparency = 1
+    leftColumn.Position              = UDim2.new(0, 5, 0, 11)
+    leftColumn.Size                  = UDim2.new(0, 220, 0, 317)
+
+    local rightColumn = Instance.new("Frame")
+    rightColumn.Name                  = "Right"
+    rightColumn.Parent                = innerTabContent
+    rightColumn.BackgroundTransparency = 1
+    rightColumn.Position              = UDim2.new(0, 232, 0, 11)
+    rightColumn.Size                  = UDim2.new(0, 220, 0, 317)
+
+    local leftLayout = Instance.new("UIListLayout")
+    leftLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    leftLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+    leftLayout.Padding             = UDim.new(0, 9)
+    leftLayout.Parent              = leftColumn
+
+    local rightLayout = Instance.new("UIListLayout")
+    rightLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    rightLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+    rightLayout.Padding             = UDim.new(0, 9)
+    rightLayout.Parent              = rightColumn
+
+    -- Template: tab page
+    local tabPageTemplate = Instance.new("Frame")
+    tabPageTemplate.Name                  = "TabExample"
+    tabPageTemplate.Parent                = examples
+    tabPageTemplate.BackgroundTransparency = 1
+    tabPageTemplate.BorderSizePixel       = 0
+    tabPageTemplate.Size                  = UDim2.new(0, 456, 0, 350)
+    tabPageTemplate.Visible               = false
+
+    local tabPageHeader = Instance.new("Frame")
+    tabPageHeader.Parent               = tabPageTemplate
+    tabPageHeader.BackgroundTransparency = 1
+    tabPageHeader.Size                 = UDim2.new(1, 0, 0, 21)
+
+    local tabPageHeaderLayout = Instance.new("UIListLayout")
+    tabPageHeaderLayout.FillDirection        = Enum.FillDirection.Horizontal
+    tabPageHeaderLayout.HorizontalAlignment  = Enum.HorizontalAlignment.Center
+    tabPageHeaderLayout.SortOrder            = Enum.SortOrder.LayoutOrder
+    tabPageHeaderLayout.VerticalAlignment    = Enum.VerticalAlignment.Center
+    tabPageHeaderLayout.Parent               = tabPageHeader
+
+    local fixFrame = Instance.new("Frame")
+    fixFrame.Name                  = "Fix"
+    fixFrame.Parent                = tabPageTemplate
+    fixFrame.BackgroundTransparency = 1
+    fixFrame.Position              = UDim2.new(0, 0, 0, 1)
+    fixFrame.Size                  = UDim2.new(0, 456, 0, 328)
+
+    -- ────────────────────────────────────────────────────────
+    --  Tab criação
+    -- ────────────────────────────────────────────────────────
+
+    local firstTab     = true
+    local activeTabName = nil
+
+    function Menu:Tab(tabName)
+        local Tab = {}
+
+        local tabButton = tabButtonTemplate:Clone()
+        local tabPage   = tabPageTemplate:Clone()
+
+        tabPage.Fix.ClipsDescendants = true
+        tabPage.Name  = tabName
+        tabButton.Visible = true
+        tabButton.Name    = tabName
+        tabButton.TextLabel.Text = tabName
+
+        if firstTab then
+            tabPage.Visible   = true
+            firstTab          = false
+            activeTabName     = tabName
+        else
+            tabButton.Frame.BackgroundTransparency = 1
+            tabButton.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+        end
+
+        tabButton.MouseButton1Down:Connect(function()
+            activeTabName = tabName
+            tabPage.Visible = true
+
+            Library:Tween(tabButton.Frame, TWEEN_MED, { BackgroundTransparency = 0 })
+            Library:Tween(tabButton, TWEEN_MED, { BackgroundColor3 = Color3.fromRGB(23, 23, 23) })
+
+            for _, btn in pairs(tabButtonsFrame:GetChildren()) do
+                if btn:IsA("TextButton") and btn.Name ~= activeTabName then
+                    Library:Tween(btn.Frame, TWEEN_MED, { BackgroundTransparency = 1 })
+                    Library:Tween(btn, TWEEN_MED, { BackgroundColor3 = Color3.fromRGB(15, 15, 15) })
+                end
+            end
+
+            for _, page in pairs(tabsContainer:GetChildren()) do
+                if page:IsA("Frame") and page.Name ~= activeTabName then
+                    page.Visible = false
+                end
+            end
+        end)
+
+        -- ── Inner tabs ───────────────────────────────────────
+
+        local firstInnerTab = true
+        local activeInnerTab = nil
+        local innerTabCount  = 0
+
+        function Tab:Tab(innerName)
+            local InnerTab = {}
+
+            innerTabCount = innerTabCount + 1
+
+            local innerBtn = innerTabTemplate:Clone()
+            innerBtn.Text    = innerName
+            innerBtn.Name    = innerName
+            innerBtn.Visible = true
+
+            if firstInnerTab then
+                firstInnerTab = false
+                activeInnerTab = innerName
+            else
+                innerBtn.Decoration.BackgroundTransparency = 1
+                innerBtn.Frame.Visible = false
+            end
+
+            innerBtn.Frame.Name = innerName
+
+            innerBtn.MouseButton1Down:Connect(function()
+                activeInnerTab = innerName
+                tabPage.Fix[innerName].Visible = true
+
+                Library:Tween(innerBtn.Decoration, TWEEN_MED, { BackgroundTransparency = 0 })
+
+                for _, btn in pairs(tabPage.Frame:GetChildren()) do
+                    if btn:IsA("TextButton") and btn.Name ~= innerName then
+                        Library:Tween(btn.Decoration, TWEEN_MED, { BackgroundTransparency = 1 })
+                        tabPage.Fix[btn.Name].Visible = false
+                    end
+                end
+            end)
+
+            innerBtn[innerName].Parent = tabPage.Fix
+            innerBtn.Parent            = tabPage.Frame
+
+            -- Redimensionar todos os botões igualmente
+            for _, btn in pairs(tabPage.Frame:GetChildren()) do
+                if btn:IsA("TextButton") then
+                    btn.Size = UDim2.new(1 / innerTabCount, 0, 1, 0)
+                end
+            end
+
+            -- ── Section criação ──────────────────────────────
+
+            function InnerTab:Section(sectionName, columnSide)
+                local Section = {}
+
+                local sectionFrame = Instance.new("Frame")
+                sectionFrame.Name             = "Section"
+                sectionFrame.Parent           = tabPage.Fix[innerBtn.Text][columnSide]
+                sectionFrame.BackgroundColor3 = BG_PANEL
+                sectionFrame.BorderSizePixel  = 0
+                sectionFrame.Size             = UDim2.new(1, 0, 0, 18)
+
+                local sectionBorder = Instance.new("Frame")
+                sectionBorder.Parent           = sectionFrame
+                sectionBorder.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                sectionBorder.BorderSizePixel  = 0
+                sectionBorder.Position         = UDim2.new(0, 1, 0, 1)
+                sectionBorder.Size             = UDim2.new(1, -2, 1, -2)
+
+                local sectionInner = Instance.new("Frame")
+                sectionInner.Parent           = sectionBorder
+                sectionInner.BackgroundColor3 = BG_MID
+                sectionInner.BorderSizePixel  = 0
+                sectionInner.Position         = UDim2.new(0, 1, 0, 1)
+                sectionInner.Size             = UDim2.new(1, -2, 1, -2)
+
+                local sectionLayout = Instance.new("UIListLayout")
+                sectionLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+                sectionLayout.Padding             = UDim.new(0, 2)
+                sectionLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                sectionLayout.Parent              = sectionInner
+
+                local sectionPadding = Instance.new("UIPadding")
+                sectionPadding.PaddingTop = UDim.new(0, 10)
+                sectionPadding.Parent     = sectionInner
+
+                local sectionTitle = Instance.new("TextLabel")
+                sectionTitle.Parent               = sectionBorder
+                sectionTitle.BackgroundTransparency = 1
+                sectionTitle.Position             = UDim2.new(0, 17, 0, -5)
+                sectionTitle.Size                 = UDim2.new(0.786, 0, 0, 7)
+                sectionTitle.Font                 = Enum.Font.Code
+                sectionTitle.Text                 = sectionName
+                sectionTitle.TextColor3           = TEXT_ON
+                sectionTitle.TextSize             = 13
+                sectionTitle.TextStrokeTransparency = 0
+                sectionTitle.TextXAlignment       = Enum.TextXAlignment.Left
+
+                -- ── Cheats ──────────────────────────────────
+
+                function Section:Cheat(cheatType, label, callback, options)
+                    local Cheat = {}
+                    callback = callback or function() end
+                    options  = options  or {}
+
+                    -- ── Toggle ───────────────────────────────
+                    if cheatType == "Toggle" then
+                        Cheat.value = { Toggle = options.default or false }
+                        sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 16)
+
+                        local btn = Instance.new("TextButton")
+                        btn.Modal              = true
+                        btn.Name               = "Toggle"
+                        btn.Parent             = sectionInner
+                        btn.BackgroundTransparency = 1
+                        btn.Size               = UDim2.new(1, 0, 0, 14)
+                        btn.Font               = Enum.Font.SourceSans
+                        btn.Text               = ""
+
+                        local box = Instance.new("Frame")
+                        box.Parent           = btn
+                        box.BackgroundColor3 = BOX_OFF
+                        box.BorderColor3     = Color3.fromRGB(5, 5, 5)
+                        box.Position         = UDim2.new(0, 8, 0, 0)
+                        box.Size             = UDim2.new(0, 10, 0, 10)
+
+                        local lbl = Instance.new("TextLabel")
+                        lbl.Parent               = btn
+                        lbl.BackgroundTransparency = 1
+                        lbl.Position             = UDim2.new(0.127, 0, 0, -1)
+                        lbl.Size                 = UDim2.new(0.873, 0, 1, -4)
+                        lbl.Font                 = Enum.Font.SourceSans
+                        lbl.Text                 = label
+                        lbl.TextColor3           = TEXT_OFF
+                        lbl.TextSize             = 14
+                        lbl.TextXAlignment       = Enum.TextXAlignment.Left
+
+                        if options.default then
+                            box.BackgroundColor3 = ACCENT
+                            lbl.TextColor3       = TEXT_ON
+                        end
+
+                        function Cheat:SetValue(val)
+                            Cheat.value = val
+                            if val.Toggle then
+                                Library:Tween(box, TWEEN_FAST, { BackgroundColor3 = ACCENT })
+                                Library:Tween(lbl, TWEEN_FAST, { TextColor3 = TEXT_ON })
+                            else
+                                Library:Tween(box, TWEEN_FAST, { BackgroundColor3 = BOX_OFF })
+                                Library:Tween(lbl, TWEEN_FAST, { TextColor3 = TEXT_OFF })
+                            end
+                            callback(val)
+                        end
+
+                        btn.MouseButton1Down:Connect(function()
+                            Cheat.value.Toggle = not Cheat.value.Toggle
+                            Cheat:SetValue(Cheat.value)
+                        end)
+
+                    -- ── ToggleKey ─────────────────────────────
+                    elseif cheatType == "ToggleKey" then
+                        sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 16)
+
+                        Cheat.value = {
+                            Toggle = options.default ~= nil and options.default.Toggle or false,
+                            Key    = options.default ~= nil and options.default.Key    or nil,
+                            Type   = options.default ~= nil and options.default.Type   or "Always",
+                        }
+                        Cheat.value.Active = true  -- Always = sempre ativo
+
+                        options.listname = options.listname or label
+
+                        local outerBtn = Instance.new("TextButton")
+                        outerBtn.Name               = "Cheat"
+                        outerBtn.Parent             = sectionInner
+                        outerBtn.BackgroundTransparency = 1
+                        outerBtn.Size               = UDim2.new(1, 0, 0, 14)
+                        outerBtn.Font               = Enum.Font.SourceSans
+                        outerBtn.Text               = ""
+
+                        local box = Instance.new("Frame")
+                        box.Parent           = outerBtn
+                        box.BackgroundColor3 = BOX_OFF
+                        box.BorderColor3     = Color3.fromRGB(5, 5, 5)
+                        box.Position         = UDim2.new(0, 8, 0, 0)
+                        box.Size             = UDim2.new(0, 10, 0, 10)
+
+                        local lbl = Instance.new("TextLabel")
+                        lbl.Parent               = outerBtn
+                        lbl.BackgroundTransparency = 1
+                        lbl.Position             = UDim2.new(0.127, 0, 0, -1)
+                        lbl.Size                 = UDim2.new(0.873, 0, 1, -4)
+                        lbl.Font                 = Enum.Font.SourceSans
+                        lbl.Text                 = label
+                        lbl.TextColor3           = TEXT_OFF
+                        lbl.TextSize             = 14
+                        lbl.TextXAlignment       = Enum.TextXAlignment.Left
+
+                        -- Keybind button
+                        local keybindBtn = Instance.new("TextButton")
+                        keybindBtn.Name               = "Keybind"
+                        keybindBtn.Parent             = outerBtn
+                        keybindBtn.BackgroundTransparency = 1
+                        keybindBtn.BorderColor3       = Color3.fromRGB(0, 0, 0)
+                        keybindBtn.Position           = UDim2.new(0, 160, 0, -3)
+                        keybindBtn.Size               = UDim2.new(-0.005, 47, 1, 0)
+                        keybindBtn.Font               = Enum.Font.SourceSans
+                        keybindBtn.Text               = "[None]"
+                        keybindBtn.TextColor3         = Color3.fromRGB(204, 204, 204)
+                        keybindBtn.TextSize           = 13
+                        keybindBtn.TextStrokeTransparency = 0
+                        keybindBtn.TextXAlignment     = Enum.TextXAlignment.Right
+                        keybindBtn.TextYAlignment     = Enum.TextYAlignment.Top
+
+                        -- Dropdown de tipo (Always / Hold / Toggle)
+                        local typeDropdown = Instance.new("Frame")
+                        typeDropdown.Parent           = keybindBtn
+                        typeDropdown.BackgroundColor3 = Color3.fromRGB(13, 13, 13)
+                        typeDropdown.BorderColor3     = Color3.fromRGB(0, 0, 0)
+                        typeDropdown.Position         = UDim2.new(0, 0, 0.196, 0)
+                        typeDropdown.Size             = UDim2.new(0, 46, 0, 56)
+                        typeDropdown.Visible          = false
+                        typeDropdown.ZIndex           = 2
+
+                        local typeLayout = Instance.new("UIListLayout")
+                        typeLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                        typeLayout.Parent    = typeDropdown
+
+                        local btnAlways = Instance.new("TextButton")
+                        btnAlways.Name               = "always"
+                        btnAlways.Parent             = typeDropdown
+                        btnAlways.BackgroundTransparency = 1
+                        btnAlways.BorderSizePixel    = 0
+                        btnAlways.Size               = UDim2.new(1, 0, 0, 18)
+                        btnAlways.ZIndex             = 2
+                        btnAlways.Font               = Enum.Font.SourceSansBold
+                        btnAlways.Text               = "Always"
+                        btnAlways.TextColor3         = ACCENT
+                        btnAlways.TextSize           = 14
+
+                        local btnHold = Instance.new("TextButton")
+                        btnHold.Name               = "hold"
+                        btnHold.Parent             = typeDropdown
+                        btnHold.BackgroundTransparency = 1
+                        btnHold.BorderSizePixel    = 0
+                        btnHold.Size               = UDim2.new(1, 0, 0, 18)
+                        btnHold.ZIndex             = 2
+                        btnHold.Font               = Enum.Font.SourceSans
+                        btnHold.Text               = "Hold"
+                        btnHold.TextColor3         = TEXT_OFF
+                        btnHold.TextSize           = 14
+
+                        local btnToggle = Instance.new("TextButton")
+                        btnToggle.Name               = "toggle"
+                        btnToggle.Parent             = typeDropdown
+                        btnToggle.BackgroundTransparency = 1
+                        btnToggle.BorderSizePixel    = 0
+                        btnToggle.Size               = UDim2.new(1, 0, 0, 18)
+                        btnToggle.ZIndex             = 2
+                        btnToggle.Font               = Enum.Font.SourceSans
+                        btnToggle.Text               = "Toggle"
+                        btnToggle.TextColor3         = TEXT_OFF
+                        btnToggle.TextSize           = 14
+
+                        local allTypeButtons = { btnAlways, btnHold, btnToggle }
+
+                        local function resetTypeColors()
+                            for _, tb in pairs(allTypeButtons) do
+                                tb.TextColor3 = TEXT_OFF
+                                tb.Font       = Enum.Font.SourceSans
+                            end
+                        end
+
+                        for _, typeBtn in pairs(allTypeButtons) do
+                            typeBtn.MouseButton1Down:Connect(function()
+                                Cheat.value.Type = typeBtn.Text
+                                typeDropdown.Visible = false
+
+                                resetTypeColors()
+                                typeBtn.Font       = Enum.Font.SourceSansBold
+                                Library:Tween(typeBtn, TWEEN_FAST, { TextColor3 = ACCENT })
+
+                                Cheat.value.Active = Cheat.value.Type == "Always"
+                                callback(Cheat.value)
+                            end)
+
+                            typeBtn.MouseEnter:Connect(function()
+                                if Cheat.value.Type ~= typeBtn.Text then
+                                    typeBtn.Font = Enum.Font.SourceSansBold
+                                    Library:Tween(typeBtn, TWEEN_FAST, { TextColor3 = TEXT_ON })
+                                end
+                            end)
+
+                            typeBtn.MouseLeave:Connect(function()
+                                if Cheat.value.Type ~= typeBtn.Text then
+                                    typeBtn.Font = Enum.Font.SourceSans
+                                    Library:Tween(typeBtn, TWEEN_FAST, { TextColor3 = TEXT_OFF })
+                                end
+                            end)
+                        end
+
+                        local dropdownHover  = false
+                        local keybindHover   = false
+                        local listeningForKey = false
+
+                        typeDropdown.MouseEnter:Connect(function() dropdownHover = true end)
+                        typeDropdown.MouseLeave:Connect(function() dropdownHover = false end)
+                        keybindBtn.MouseEnter:Connect(function() keybindHover = true end)
+                        keybindBtn.MouseLeave:Connect(function() keybindHover = false end)
+
+                        keybindBtn.MouseButton1Down:Connect(function()
+                            if not listeningForKey then
+                                task.wait()
+                                listeningForKey = true
+                                keybindBtn.Text = "[...]"
+                            end
+                        end)
+
+                        keybindBtn.MouseButton2Down:Connect(function()
+                            if not listeningForKey then
+                                typeDropdown.Visible = not typeDropdown.Visible
+                            end
+                        end)
+
+                        -- Heartbeat: Active state
+                        game:GetService("RunService").Heartbeat:Connect(function()
+                            if Cheat.value.Key ~= nil and Cheat.value.Type ~= "Always" then
+                                if Cheat.value.Type == "Hold" then
+                                    if not string.find(Cheat.value.Key, "Mouse") then
+                                        Cheat.value.Active = game:GetService("UserInputService"):IsKeyDown(Enum.KeyCode[Cheat.value.Key])
+                                    else
+                                        Cheat.value.Active = game:GetService("UserInputService"):IsMouseButtonPressed(Enum.UserInputType[Cheat.value.Key])
+                                    end
+                                end
+                            else
+                                Cheat.value.Active = true
+                            end
+
+                            -- FIX: quando Always, adiciona na keylist com texto "Always"
+                            if Cheat.value.Toggle then
+                                if Cheat.value.Type == "Always" then
+                                    Menu.Keylist:Add(options.listname)
+                                    -- Atualiza o status para "Always"
+                                    local row = keyList:FindFirstChild(options.listname)
+                                    if row then
+                                        -- Encontra o segundo TextLabel (status)
+                                        for _, child in pairs(row:GetChildren()) do
+                                            if child:IsA("TextLabel") and child ~= row.KeyText then
+                                                child.Text = "(Always)"
+                                            end
+                                        end
+                                    end
+                                elseif Cheat.value.Active and Cheat.value.Key ~= nil then
+                                    Menu.Keylist:Add(options.listname)
+                                    local row = keyList:FindFirstChild(options.listname)
+                                    if row then
+                                        for _, child in pairs(row:GetChildren()) do
+                                            if child:IsA("TextLabel") and child ~= row.KeyText then
+                                                child.Text = "(on)"
+                                            end
+                                        end
+                                    end
+                                else
+                                    Menu.Keylist:Remove(options.listname)
+                                end
+                            else
+                                Menu.Keylist:Remove(options.listname)
+                            end
+                        end)
+
+                        function Cheat:SetValue(val)
+                            Cheat.value = val
+
+                            if val.Toggle then
+                                Library:Tween(box, TWEEN_FAST, { BackgroundColor3 = ACCENT })
+                                Library:Tween(lbl, TWEEN_FAST, { TextColor3 = TEXT_ON })
+                            else
+                                Library:Tween(box, TWEEN_FAST, { BackgroundColor3 = BOX_OFF })
+                                Library:Tween(lbl, TWEEN_FAST, { TextColor3 = TEXT_OFF })
+                            end
+
+                            resetTypeColors()
+                            if val.Type == "Always" then
+                                btnAlways.TextColor3 = ACCENT
+                                btnAlways.Font       = Enum.Font.SourceSansBold
+                            elseif val.Type == "Hold" then
+                                btnHold.TextColor3 = ACCENT
+                                btnHold.Font       = Enum.Font.SourceSansBold
+                            elseif val.Type == "Toggle" then
+                                btnToggle.TextColor3 = ACCENT
+                                btnToggle.Font       = Enum.Font.SourceSansBold
+                            end
+
+                            Cheat.value.Active = val.Type == "Always"
+
+                            keybindBtn.Text = val.Key ~= nil and "[" .. val.Key .. "]" or "[None]"
+                            callback(val)
+                        end
+
+                        game:GetService("UserInputService").InputBegan:Connect(function(input)
+                            -- Fechar dropdown ao clicar fora
+                            if (input.UserInputType == Enum.UserInputType.MouseButton1 or
+                                input.UserInputType == Enum.UserInputType.MouseButton2) and not listeningForKey then
+                                if typeDropdown.Visible and not dropdownHover and not keybindHover then
+                                    typeDropdown.Visible = false
+                                end
+                            end
+
+                            -- Capturar tecla
+                            if listeningForKey then
+                                listeningForKey = false
+                                local keyName = input.KeyCode.Name ~= "Unknown"
+                                    and input.KeyCode.Name
+                                    or  input.UserInputType.Name
+
+                                if input.KeyCode.Name == "Backspace" then
+                                    keybindBtn.Text    = "[None]"
+                                    Cheat.value.Key    = nil
+                                else
+                                    keybindBtn.Text    = "[" .. keyName .. "]"
+                                    Cheat.value.Key    = keyName
+                                end
+                            end
+
+                            -- Toggle por tecla
+                            if Cheat.value.Key ~= nil and Cheat.value.Type == "Toggle" then
+                                local matchKey   = input.KeyCode.Name        == Cheat.value.Key
+                                local matchMouse = input.UserInputType.Name  == Cheat.value.Key
+                                if matchKey or matchMouse then
+                                    Cheat.value.Active = not Cheat.value.Active
+                                end
+                            end
+                        end)
+
+                        outerBtn.MouseButton1Down:Connect(function()
+                            Cheat.value.Toggle = not Cheat.value.Toggle
+                            Cheat:SetValue(Cheat.value)
+                        end)
+
+                        if options.default ~= nil then
+                            Cheat:SetValue(options.default)
+                        end
+
+                    -- ── ToggleColor ───────────────────────────
+                    elseif cheatType == "ToggleColor" then
+                        sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 16)
+
+                        local btn = Instance.new("TextButton")
+                        btn.Name               = "Toggle"
+                        btn.Parent             = sectionInner
+                        btn.BackgroundTransparency = 1
+                        btn.Modal              = true
+                        btn.Size               = UDim2.new(1, 0, 0, 14)
+                        btn.Font               = Enum.Font.SourceSans
+                        btn.Text               = ""
+
+                        local box = Instance.new("Frame")
+                        box.Parent           = btn
+                        box.BackgroundColor3 = BOX_OFF
+                        box.BorderColor3     = Color3.fromRGB(5, 5, 5)
+                        box.Position         = UDim2.new(0, 8, 0, 0)
+                        box.Size             = UDim2.new(0, 10, 0, 10)
+
+                        local lbl = Instance.new("TextLabel")
+                        lbl.Parent               = btn
+                        lbl.BackgroundTransparency = 1
+                        lbl.Position             = UDim2.new(0.127, 0, 0, -1)
+                        lbl.Size                 = UDim2.new(0.873, 0, 1, -4)
+                        lbl.Font                 = Enum.Font.SourceSans
+                        lbl.Text                 = label
+                        lbl.TextColor3           = TEXT_OFF
+                        lbl.TextSize             = 14
+                        lbl.TextXAlignment       = Enum.TextXAlignment.Left
+
+                        Cheat.value = {
+                            Toggle = false,
+                            Color  = { R = 1, G = 1, B = 1 },
+                        }
+
+                        local hue, sat, val_v = 1, 1, 1
+
+                        local colorPicker = Instance.new("TextButton")
+                        colorPicker.Name            = "ColorPicker"
+                        colorPicker.Parent          = btn
+                        colorPicker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                        colorPicker.Position        = UDim2.new(0, 187, 0, 0)
+                        colorPicker.Size            = UDim2.new(0, 19, 0, 9)
+                        colorPicker.AutoButtonColor = false
+                        colorPicker.Text            = ""
+
+                        local pickerFrame = Instance.new("Frame")
+                        pickerFrame.Parent           = colorPicker
+                        pickerFrame.BackgroundColor3 = Color3.fromRGB(13, 13, 13)
+                        pickerFrame.Position         = UDim2.new(0, 21, 0, 4)
+                        pickerFrame.Size             = UDim2.new(0, 178, 0, 165)
+                        pickerFrame.Visible          = false
+                        pickerFrame.ZIndex           = 3
+
+                        local satValPicker = Instance.new("ImageButton")
+                        satValPicker.Name            = "J"
+                        satValPicker.Parent          = pickerFrame
+                        satValPicker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                        satValPicker.Position        = UDim2.new(0, 5, 0, 5)
+                        satValPicker.Size            = UDim2.new(0, 152, 0, 152)
+                        satValPicker.Image           = "rbxassetid://698052001"
+                        satValPicker.ZIndex          = 3
+
+                        local svCursor = Instance.new("Frame")
+                        svCursor.Parent           = satValPicker
+                        svCursor.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                        svCursor.Size             = UDim2.new(0, 1, 0, 1)
+                        svCursor.ZIndex           = 3
+
+                        local huePicker = Instance.new("ImageButton")
+                        huePicker.Parent           = pickerFrame
+                        huePicker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                        huePicker.Position         = UDim2.new(0, 160, 0, 5)
+                        huePicker.Size             = UDim2.new(0, 13, 0, 152)
+                        huePicker.Image            = "rbxassetid://3641079629"
+                        huePicker.ZIndex           = 3
+
+                        local hueCursor = Instance.new("Frame")
+                        hueCursor.Parent           = huePicker
+                        hueCursor.BackgroundColor3 = ACCENT
+                        hueCursor.Position         = UDim2.new(0, 0, 0, 0)
+                        hueCursor.Size             = UDim2.new(0, 13, 0, 3)
+                        hueCursor.ZIndex           = 3
+
+                        function Cheat:SetValue(newVal)
+                            Cheat.value = newVal
+                            if newVal.Toggle then
+                                Library:Tween(box, TWEEN_FAST, { BackgroundColor3 = ACCENT })
+                                Library:Tween(lbl, TWEEN_FAST, { TextColor3 = TEXT_ON })
+                            else
+                                Library:Tween(box, TWEEN_FAST, { BackgroundColor3 = BOX_OFF })
+                                Library:Tween(lbl, TWEEN_FAST, { TextColor3 = TEXT_OFF })
+                            end
+                            hue, sat, val_v = color(newVal.Color):ToHSV()
+                            hue   = math.clamp(hue,   0, 1)
+                            sat   = math.clamp(sat,   0, 1)
+                            val_v = math.clamp(val_v, 0, 1)
+                            svCursor.Position          = UDim2.new(1 - hue, 0, 1 - sat, 0)
+                            colorPicker.BackgroundColor3 = Color3.fromHSV(hue, sat, val_v)
+                            hueCursor.Position         = UDim2.new(0, 0, val_v, 0)
+                            satValPicker.ImageColor3   = Color3.fromHSV(0, 0, val_v)
+                            newVal.Color = fromcolor(Color3.fromHSV(hue, sat, val_v))
+                            callback(newVal)
+                        end
+
+                        colorPicker.MouseButton1Down:Connect(function()
+                            pickerFrame.Visible = not pickerFrame.Visible
+                        end)
+
+                        btn.MouseButton1Down:Connect(function()
+                            Cheat.value.Toggle = not Cheat.value.Toggle
+                            Cheat:SetValue(Cheat.value)
+                        end)
+
+                        local pickerHover  = false
+                        local pickerBtnHov = false
+
+                        pickerFrame.MouseEnter:Connect(function()  pickerHover    = true end)
+                        pickerFrame.MouseLeave:Connect(function()  pickerHover    = false end)
+                        colorPicker.MouseEnter:Connect(function()  pickerBtnHov   = true end)
+                        colorPicker.MouseLeave:Connect(function()  pickerBtnHov   = false end)
+
+                        game:GetService("UserInputService").InputBegan:Connect(function(input)
+                            if input.UserInputType == Enum.UserInputType.MouseButton1
+                            or input.UserInputType == Enum.UserInputType.MouseButton2 then
+                                if not pickerBtnHov and not pickerHover then
+                                    pickerFrame.Visible = false
+                                end
+                            end
+                        end)
+
+                        local function updateSatVal()
+                            local mx = game:GetService("Players").LocalPlayer:GetMouse()
+                            local px = math.clamp(mx.X - satValPicker.AbsolutePosition.X, 0, 152)
+                            local py = math.clamp(mx.Y - satValPicker.AbsolutePosition.Y, 0, 152)
+                            svCursor.Position = UDim2.new(0, px, 0, py)
+                            hue = math.clamp((satValPicker.AbsoluteSize.X - (mx.X - satValPicker.AbsolutePosition.X)) / 150, 0, 1)
+                            sat = math.clamp((satValPicker.AbsoluteSize.Y - (mx.Y - satValPicker.AbsolutePosition.Y)) / 150, 0, 1)
+                            colorPicker.BackgroundColor3 = Color3.fromHSV(hue, sat, val_v)
+                            Cheat.value.Color = fromcolor(Color3.fromHSV(hue, sat, val_v))
+                            callback(Cheat.value)
+                        end
+
+                        satValPicker.MouseButton1Down:Connect(function()
+                            updateSatVal()
+                            local move = game:GetService("Players").LocalPlayer:GetMouse().Move:Connect(updateSatVal)
+                            local rel
+                            rel = game:GetService("UserInputService").InputEnded:Connect(function(inp)
+                                if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                                    updateSatVal(); move:Disconnect(); rel:Disconnect()
+                                end
+                            end)
+                        end)
+
+                        local function updateHue()
+                            local mx = game:GetService("Players").LocalPlayer:GetMouse()
+                            local py = math.clamp(mx.Y - huePicker.AbsolutePosition.Y, 0, 148)
+                            hueCursor.Position = UDim2.new(0, 0, 0, py)
+                            val_v = 1 - py / 152
+                            satValPicker.ImageColor3 = Color3.fromHSV(0, 0, val_v)
+                            colorPicker.BackgroundColor3 = Color3.fromHSV(hue, sat, val_v)
+                            Cheat.value.Color = fromcolor(Color3.fromHSV(hue, sat, val_v))
+                            callback(Cheat.value)
+                        end
+
+                        huePicker.MouseButton1Down:Connect(function()
+                            updateHue()
+                            local move = game:GetService("Players").LocalPlayer:GetMouse().Move:Connect(updateHue)
+                            local rel
+                            rel = game:GetService("UserInputService").InputEnded:Connect(function(inp)
+                                if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                                    updateHue(); move:Disconnect(); rel:Disconnect()
+                                end
+                            end)
+                        end)
+
+                        if options.default ~= nil then Cheat:SetValue(options.default) end
+
+                    -- ── Label ─────────────────────────────────
+                    elseif cheatType == "Label" then
+                        sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 12)
+
+                        local lbl = Instance.new("TextLabel")
+                        lbl.Name               = "Label"
+                        lbl.Parent             = sectionInner
+                        lbl.BackgroundTransparency = 1
+                        lbl.Position           = UDim2.new(0.127, 0, 0.074, 0)
+                        lbl.Size               = UDim2.new(0, 160, 0, 10)
+                        lbl.Font               = Enum.Font.SourceSans
+                        lbl.TextColor3         = TEXT_DIM
+                        lbl.TextSize           = 14
+                        lbl.TextXAlignment     = Enum.TextXAlignment.Left
+                        lbl.TextYAlignment     = Enum.TextYAlignment.Bottom
+                        lbl.Text               = label
+
+                        function Cheat:SetValue(_) end
+
+                    -- ── Slider ────────────────────────────────
+                    elseif cheatType == "Slider" then
+                        sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 28)
+
+                        local minV    = options.min     or 0
+                        local maxV    = options.max     or 100
+                        local defaultV = options.default or 50
+
+                        local sliderFrame = Instance.new("Frame")
+                        sliderFrame.Name               = "Slider"
+                        sliderFrame.Parent             = sectionInner
+                        sliderFrame.BackgroundTransparency = 1
+                        sliderFrame.Size               = UDim2.new(1, 0, 0, 26)
+
+                        local sliderLabel = Instance.new("TextLabel")
+                        sliderLabel.Name               = "Label"
+                        sliderLabel.Parent             = sliderFrame
+                        sliderLabel.BackgroundTransparency = 1
+                        sliderLabel.Position           = UDim2.new(0, 28, 0, -2)
+                        sliderLabel.Size               = UDim2.new(0, 81, 0, 11)
+                        sliderLabel.Font               = Enum.Font.SourceSans
+                        sliderLabel.Text               = label
+                        sliderLabel.TextColor3         = TEXT_DIM
+                        sliderLabel.TextSize           = 14
+                        sliderLabel.TextXAlignment     = Enum.TextXAlignment.Left
+
+                        local sliderValue = Instance.new("TextLabel")
+                        sliderValue.Name               = "Value"
+                        sliderValue.Parent             = sliderFrame
+                        sliderValue.BackgroundTransparency = 1
+                        sliderValue.Position           = UDim2.new(0, 119, 0, -2)
+                        sliderValue.Size               = UDim2.new(0, 66, 0, 11)
+                        sliderValue.Font               = Enum.Font.SourceSans
+                        sliderValue.Text               = tostring(defaultV)
+                        sliderValue.TextColor3         = TEXT_DIM
+                        sliderValue.TextSize           = 14
+                        sliderValue.TextXAlignment     = Enum.TextXAlignment.Right
+
+                        local track = Instance.new("TextButton")
+                        track.Parent           = sliderFrame
+                        track.BackgroundColor3 = BOX_OFF
+                        track.BorderColor3     = Color3.fromRGB(5, 5, 5)
+                        track.Position         = UDim2.new(0, 24, 0, 12)
+                        track.Size             = UDim2.new(0, 162, 0, 8)
+                        track.AutoButtonColor  = false
+                        track.Font             = Enum.Font.SourceSans
+                        track.Text             = ""
+                        track.Modal            = true
+
+                        local fill = Instance.new("Frame")
+                        fill.Name             = "Amount"
+                        fill.Parent           = track
+                        fill.BackgroundColor3 = ACCENT
+                        fill.BorderSizePixel  = 0
+                        fill.Size             = UDim2.new(1, 0, 1, 0)
+
+                        Cheat.value = { Slider = defaultV }
+
+                        function Cheat:SetValue(val)
+                            Cheat.value = val
+                            local ratio = (val.Slider - minV) / (maxV - minV)
+                            sliderValue.Text = tostring(val.Slider)
+                            fill.Size = UDim2.new(ratio, 0, 1, 0)
+                            callback(val)
+                        end
+
+                        Cheat:SetValue(Cheat.value)
+
+                        local mx  = game.Players.LocalPlayer:GetMouse()
+                        local UIS = game:GetService("UserInputService")
+
+                        track.MouseButton1Down:Connect(function()
+                            Library:Tween(sliderLabel, TWEEN_FAST, { TextColor3 = TEXT_ON })
+                            Library:Tween(sliderValue, TWEEN_FAST, { TextColor3 = TEXT_ON })
+
+                            local function update()
+                                fill.Size = UDim2.new(0, math.clamp(mx.X - fill.AbsolutePosition.X, 0, 162), 0, 8)
+                                local v = math.floor((maxV - minV) / 162 * fill.AbsoluteSize.X + minV)
+                                sliderValue.Text        = tostring(v)
+                                Cheat.value.Slider = v
+                                callback(Cheat.value)
+                            end
+
+                            update()
+                            local move = mx.Move:Connect(update)
+                            local rel
+                            rel = UIS.InputEnded:Connect(function(inp)
+                                if inp.UserInputType == Enum.UserInputType.MouseButton1 then
+                                    Library:Tween(sliderLabel, TWEEN_FAST, { TextColor3 = TEXT_DIM })
+                                    Library:Tween(sliderValue, TWEEN_FAST, { TextColor3 = TEXT_DIM })
+                                    update()
+                                    move:Disconnect(); rel:Disconnect()
+                                end
+                            end)
+                        end)
+
+                    -- ── Button ────────────────────────────────
+                    elseif cheatType == "Button" then
+                        sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 22)
+
+                        local btnFrame = Instance.new("Frame")
+                        btnFrame.Name               = "Button"
+                        btnFrame.Parent             = sectionInner
+                        btnFrame.BackgroundTransparency = 1
+                        btnFrame.Size               = UDim2.new(1, 0, 0, 22)
+
+                        local btn = Instance.new("TextButton")
+                        btn.Parent           = btnFrame
+                        btn.BorderColor3     = Color3.fromRGB(0, 0, 0)
+                        btn.Position         = UDim2.new(0, 24, 0, 0)
+                        btn.Size             = UDim2.new(0, 162, 0, 18)
+                        btn.AutoButtonColor  = false
+                        btn.Font             = Enum.Font.SourceSans
+                        btn.Text             = ""
+
+                        local btnGradient = Instance.new("UIGradient")
+                        btnGradient.Color = ColorSequence.new{
+                            ColorSequenceKeypoint.new(0, Color3.fromRGB(33, 33, 33)),
+                            ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 26, 26)),
+                        }
+                        btnGradient.Rotation = 90
+                        btnGradient.Parent   = btn
+
+                        local btnLabel = Instance.new("TextLabel")
+                        btnLabel.Parent               = btn
+                        btnLabel.BackgroundTransparency = 1
+                        btnLabel.Size                 = UDim2.new(1, 0, 1, 0)
+                        btnLabel.Font                 = Enum.Font.SourceSans
+                        btnLabel.Text                 = label
+                        btnLabel.TextColor3           = TEXT_DIM
+                        btnLabel.TextSize             = 14
+
+                        btn.MouseEnter:Connect(function()
+                            Library:Tween(btnLabel, TWEEN_FAST, { TextColor3 = ACCENT })
+                            btnLabel.Font = Enum.Font.SourceSansBold
+                        end)
+                        btn.MouseLeave:Connect(function()
+                            Library:Tween(btnLabel, TWEEN_FAST, { TextColor3 = TEXT_DIM })
+                            btnLabel.Font = Enum.Font.SourceSans
+                        end)
+                        btn.MouseButton1Down:Connect(function()
+                            btnLabel.TextColor3 = TEXT_DIM
+                            Library:Tween(btnLabel, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextColor3 = ACCENT })
+                            callback()
+                        end)
+
+                    -- ── Dropdown ──────────────────────────────
+                    elseif cheatType == "Dropdown" then
+                        sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 37)
+
+                        local dropFrame = Instance.new("Frame")
+                        dropFrame.Name               = "Dropdown"
+                        dropFrame.Parent             = sectionInner
+                        dropFrame.BackgroundTransparency = 1
+                        dropFrame.Size               = UDim2.new(1, 0, 0, 35)
+
+                        local dropTitle = Instance.new("TextLabel")
+                        dropTitle.Name               = "Bable"
+                        dropTitle.Parent             = dropFrame
+                        dropTitle.BackgroundTransparency = 1
+                        dropTitle.Position           = UDim2.new(0.127, 0, 0.074, -2)
+                        dropTitle.Size               = UDim2.new(0, 160, 0, 10)
+                        dropTitle.Font               = Enum.Font.SourceSans
+                        dropTitle.TextColor3         = TEXT_DIM
+                        dropTitle.TextSize           = 14
+                        dropTitle.TextXAlignment     = Enum.TextXAlignment.Left
+                        dropTitle.TextYAlignment     = Enum.TextYAlignment.Bottom
+                        dropTitle.Text               = label
+
+                        local dropBtn = Instance.new("TextButton")
+                        dropBtn.Parent           = dropFrame
+                        dropBtn.BorderColor3     = Color3.fromRGB(0, 0, 0)
+                        dropBtn.Position         = UDim2.new(0, 24, 0, 13)
+                        dropBtn.Size             = UDim2.new(0, 162, 0, 18)
+                        dropBtn.AutoButtonColor  = false
+                        dropBtn.Text             = ""
+
+                        local dropGradient = Instance.new("UIGradient")
+                        dropGradient.Color = ColorSequence.new{
+                            ColorSequenceKeypoint.new(0, Color3.fromRGB(33, 33, 33)),
+                            ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 26, 26)),
+                        }
+                        dropGradient.Rotation = 90
+                        dropGradient.Parent   = dropBtn
+
+                        local dropSelected = Instance.new("TextLabel")
+                        dropSelected.Parent               = dropBtn
+                        dropSelected.BackgroundTransparency = 1
+                        dropSelected.Position             = UDim2.new(0, 4, 0, -1)
+                        dropSelected.Size                 = UDim2.new(1, -4, 1, 0)
+                        dropSelected.Font                 = Enum.Font.SourceSans
+                        dropSelected.Text                 = "none ok"
+                        dropSelected.TextColor3           = TEXT_DIM
+                        dropSelected.TextSize             = 14
+                        dropSelected.TextXAlignment       = Enum.TextXAlignment.Left
+
+                        local dropArrow = Instance.new("ImageLabel")
+                        dropArrow.Parent               = dropBtn
+                        dropArrow.BackgroundTransparency = 1
+                        dropArrow.Position             = UDim2.new(0, 150, 0, 6)
+                        dropArrow.Size                 = UDim2.new(0, 5, 0, 4)
+                        dropArrow.Image                = "rbxassetid://6119286865"
+
+                        local dropList = Instance.new("Frame")
+                        dropList.Name             = "Drop"
+                        dropList.Parent           = dropFrame
+                        dropList.BackgroundColor3 = Color3.fromRGB(23, 23, 23)
+                        dropList.BorderColor3     = Color3.fromRGB(0, 0, 0)
+                        dropList.Position         = UDim2.new(0, 24, 0, 32)
+                        dropList.Size             = UDim2.new(0, 162, 0, 4)
+                        dropList.Visible          = false
+                        dropList.ZIndex           = 2
+
+                        local dropListLayout = Instance.new("UIListLayout")
+                        dropListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                        dropListLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+                        dropListLayout.Parent              = dropList
+
+                        local dropPadding = Instance.new("UIPadding")
+                        dropPadding.PaddingTop = UDim.new(0, 1)
+                        dropPadding.Parent     = dropList
+
+                        Cheat.value = { Dropdown = options.options and options.options[1] or "" }
+
+                        function Cheat:SetValue(val)
+                            Cheat.value    = val
+                            dropSelected.Text = val.Dropdown
+                            callback(val)
+                        end
+
+                        local dropListHover = false
+                        local dropBtnHover  = false
+
+                        dropList.MouseEnter:Connect(function()  dropListHover = true  end)
+                        dropList.MouseLeave:Connect(function()  dropListHover = false end)
+                        dropFrame.MouseEnter:Connect(function() dropBtnHover  = true  end)
+                        dropFrame.MouseLeave:Connect(function() dropBtnHover  = false end)
+
+                        local function closeDropdown()
+                            dropList.Visible = false
+                            Library:Tween(dropTitle,   TWEEN_FAST, { TextColor3 = TEXT_DIM })
+                            Library:Tween(dropSelected, TWEEN_FAST, { TextColor3 = TEXT_DIM })
+                        end
+
+                        dropBtn.MouseButton1Down:Connect(function()
+                            if dropList.Visible then
+                                closeDropdown()
+                            else
+                                dropList.Visible = true
+                                Library:Tween(dropTitle,   TWEEN_FAST, { TextColor3 = TEXT_ON })
+                                Library:Tween(dropSelected, TWEEN_FAST, { TextColor3 = TEXT_ON })
+                            end
+                        end)
+
+                        game:GetService("UserInputService").InputBegan:Connect(function(input)
+                            if input.UserInputType == Enum.UserInputType.MouseButton1
+                            or input.UserInputType == Enum.UserInputType.MouseButton2 then
+                                if not dropListHover and dropList.Visible and not dropBtnHover then
+                                    closeDropdown()
+                                end
+                            end
+                        end)
+
+                        local firstOption = true
+                        for _, optionName in ipairs(options.options or {}) do
+                            dropList.Size = dropList.Size + UDim2.new(0, 0, 0, 16)
+
+                            local optBtn = Instance.new("TextButton")
+                            optBtn.Parent               = dropList
+                            optBtn.BackgroundTransparency = 1
+                            optBtn.BorderSizePixel      = 0
+                            optBtn.Size                 = UDim2.new(1, 0, 0, 16)
+                            optBtn.Font                 = Enum.Font.SourceSans
+                            optBtn.Text                 = ""
+                            optBtn.ZIndex               = 2
+
+                            local optLabel = Instance.new("TextLabel")
+                            optLabel.Parent               = optBtn
+                            optLabel.BackgroundTransparency = 1
+                            optLabel.Position             = UDim2.new(0, 6, 0, 0)
+                            optLabel.Size                 = UDim2.new(1, -9, 1, 0)
+                            optLabel.Font                 = Enum.Font.SourceSans
+                            optLabel.Text                 = optionName
+                            optLabel.TextColor3           = TEXT_OFF
+                            optLabel.TextSize             = 14
+                            optLabel.TextXAlignment       = Enum.TextXAlignment.Left
+                            optLabel.ZIndex               = 2
+
+                            if firstOption then
+                                firstOption = false
+                                Cheat.value.Dropdown = optionName
+                                dropSelected.Text    = optionName
+                            end
+
+                            optBtn.MouseEnter:Connect(function()
+                                optLabel.Font = Enum.Font.SourceSansBold
+                                Library:Tween(optLabel, TWEEN_FAST, { TextColor3 = ACCENT })
+                            end)
+                            optBtn.MouseLeave:Connect(function()
+                                optLabel.Font = Enum.Font.SourceSans
+                                Library:Tween(optLabel, TWEEN_FAST, { TextColor3 = TEXT_OFF })
+                            end)
+                            optBtn.MouseButton1Down:Connect(function()
+                                Cheat.value.Dropdown = optionName
+                                dropSelected.Text    = optionName
+                                callback(Cheat.value)
+                                closeDropdown()
+                            end)
+                        end
+
+                    -- ── Jumbobox (multi-select) ────────────────
+                    elseif cheatType == "Jumbobox" then
+                        sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 37)
+
+                        -- (estrutura idêntica ao Dropdown, omitida por brevidade;
+                        --  segue o mesmo padrão acima com multi-select)
+                        local jumboFrame = Instance.new("Frame")
+                        jumboFrame.Name               = "Dropdown"
+                        jumboFrame.Parent             = sectionInner
+                        jumboFrame.BackgroundTransparency = 1
+                        jumboFrame.Size               = UDim2.new(1, 0, 0, 35)
+
+                        local jumboTitle = Instance.new("TextLabel")
+                        jumboTitle.Name               = "Bable"
+                        jumboTitle.Parent             = jumboFrame
+                        jumboTitle.BackgroundTransparency = 1
+                        jumboTitle.Position           = UDim2.new(0.127, 0, 0.074, -2)
+                        jumboTitle.Size               = UDim2.new(0, 160, 0, 10)
+                        jumboTitle.Font               = Enum.Font.SourceSans
+                        jumboTitle.TextColor3         = TEXT_DIM
+                        jumboTitle.TextSize           = 14
+                        jumboTitle.TextXAlignment     = Enum.TextXAlignment.Left
+                        jumboTitle.TextYAlignment     = Enum.TextYAlignment.Bottom
+                        jumboTitle.Text               = label
+
+                        local jumboBtn = Instance.new("TextButton")
+                        jumboBtn.Parent           = jumboFrame
+                        jumboBtn.BorderColor3     = Color3.fromRGB(0, 0, 0)
+                        jumboBtn.Position         = UDim2.new(0, 24, 0, 13)
+                        jumboBtn.Size             = UDim2.new(0, 162, 0, 18)
+                        jumboBtn.AutoButtonColor  = false
+                        jumboBtn.Text             = ""
+
+                        local jumboGrad = Instance.new("UIGradient")
+                        jumboGrad.Color = ColorSequence.new{
+                            ColorSequenceKeypoint.new(0, Color3.fromRGB(33, 33, 33)),
+                            ColorSequenceKeypoint.new(1, Color3.fromRGB(26, 26, 26)),
+                        }
+                        jumboGrad.Rotation = 90
+                        jumboGrad.Parent   = jumboBtn
+
+                        local jumboSelected = Instance.new("TextLabel")
+                        jumboSelected.Parent               = jumboBtn
+                        jumboSelected.BackgroundTransparency = 1
+                        jumboSelected.Position             = UDim2.new(0, 4, 0, -1)
+                        jumboSelected.Size                 = UDim2.new(1, -4, 1, 0)
+                        jumboSelected.Font                 = Enum.Font.SourceSans
+                        jumboSelected.Text                 = "0 Selected"
+                        jumboSelected.TextColor3           = TEXT_DIM
+                        jumboSelected.TextSize             = 14
+                        jumboSelected.TextXAlignment       = Enum.TextXAlignment.Left
+
+                        local jumboList = Instance.new("Frame")
+                        jumboList.Name             = "Drop"
+                        jumboList.Parent           = jumboFrame
+                        jumboList.BackgroundColor3 = Color3.fromRGB(23, 23, 23)
+                        jumboList.BorderColor3     = Color3.fromRGB(0, 0, 0)
+                        jumboList.Position         = UDim2.new(0, 24, 0, 32)
+                        jumboList.Size             = UDim2.new(0, 162, 0, 4)
+                        jumboList.Visible          = false
+                        jumboList.ZIndex           = 2
+
+                        local jumboListLayout = Instance.new("UIListLayout")
+                        jumboListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+                        jumboListLayout.SortOrder           = Enum.SortOrder.LayoutOrder
+                        jumboListLayout.Parent              = jumboList
+
+                        local jumboPad = Instance.new("UIPadding")
+                        jumboPad.PaddingTop = UDim.new(0, 1)
+                        jumboPad.Parent     = jumboList
+
+                        Cheat.value = { Jumbobox = {} }
+
+                        function Cheat:SetValue(val)
+                            Cheat.value = val
+                            jumboSelected.Text = #val.Jumbobox .. " Selected"
+                            for _, child in pairs(jumboList:GetChildren()) do
+                                if child:IsA("TextButton") then
+                                    child.TextLabel.TextColor3 = TEXT_OFF
+                                    child.TextLabel.Font       = Enum.Font.SourceSans
+                                    if table.find(val.Jumbobox, child.TextLabel.Text) then
+                                        child.TextLabel.TextColor3 = ACCENT
+                                        child.TextLabel.Font       = Enum.Font.SourceSansBold
+                                    end
+                                end
+                            end
+                            callback(val)
+                        end
+
+                        local jumboListHov = false
+                        local jumboBtnHov  = false
+
+                        jumboList.MouseEnter:Connect(function()  jumboListHov = true  end)
+                        jumboList.MouseLeave:Connect(function()  jumboListHov = false end)
+                        jumboFrame.MouseEnter:Connect(function() jumboBtnHov  = true  end)
+                        jumboFrame.MouseLeave:Connect(function() jumboBtnHov  = false end)
+
+                        local function closeJumbo()
+                            jumboList.Visible = false
+                            Library:Tween(jumboTitle,   TWEEN_FAST, { TextColor3 = TEXT_DIM })
+                            Library:Tween(jumboSelected, TWEEN_FAST, { TextColor3 = TEXT_DIM })
+                        end
+
+                        jumboBtn.MouseButton1Down:Connect(function()
+                            if jumboList.Visible then closeJumbo()
+                            else
+                                jumboList.Visible = true
+                                Library:Tween(jumboTitle,   TWEEN_FAST, { TextColor3 = TEXT_ON })
+                                Library:Tween(jumboSelected, TWEEN_FAST, { TextColor3 = TEXT_ON })
+                            end
+                        end)
+
+                        game:GetService("UserInputService").InputBegan:Connect(function(input)
+                            if input.UserInputType == Enum.UserInputType.MouseButton1
+                            or input.UserInputType == Enum.UserInputType.MouseButton2 then
+                                if not jumboListHov and jumboList.Visible and not jumboBtnHov then
+                                    closeJumbo()
+                                end
+                            end
+                        end)
+
+                        for _, optionName in ipairs(options.options or {}) do
+                            jumboList.Size = jumboList.Size + UDim2.new(0, 0, 0, 16)
+
+                            local optBtn = Instance.new("TextButton")
+                            optBtn.Name               = optionName
+                            optBtn.Parent             = jumboList
+                            optBtn.BackgroundTransparency = 1
+                            optBtn.BorderSizePixel    = 0
+                            optBtn.Size               = UDim2.new(1, 0, 0, 16)
+                            optBtn.Font               = Enum.Font.SourceSans
+                            optBtn.Text               = ""
+                            optBtn.ZIndex             = 2
+
+                            local optLabel = Instance.new("TextLabel")
+                            optLabel.Parent               = optBtn
+                            optLabel.BackgroundTransparency = 1
+                            optLabel.Position             = UDim2.new(0, 6, 0, 0)
+                            optLabel.Size                 = UDim2.new(1, -9, 1, 0)
+                            optLabel.Font                 = Enum.Font.SourceSans
+                            optLabel.Text                 = optionName
+                            optLabel.TextColor3           = TEXT_OFF
+                            optLabel.TextSize             = 14
+                            optLabel.TextXAlignment       = Enum.TextXAlignment.Left
+                            optLabel.ZIndex               = 2
+
+                            optBtn.MouseEnter:Connect(function()
+                                optLabel.Font = Enum.Font.SourceSansBold
+                            end)
+                            optBtn.MouseLeave:Connect(function()
+                                if not table.find(Cheat.value.Jumbobox, optionName) then
+                                    optLabel.Font = Enum.Font.SourceSans
+                                end
+                            end)
+                            optBtn.MouseButton1Down:Connect(function()
+                                if table.find(Cheat.value.Jumbobox, optionName) then
+                                    optLabel.TextColor3 = TEXT_OFF
+                                    for i, v in pairs(Cheat.value.Jumbobox) do
+                                        if v == optionName then
+                                            table.remove(Cheat.value.Jumbobox, i)
+                                        end
+                                    end
+                                    optLabel.Font = Enum.Font.SourceSans
+                                else
+                                    table.insert(Cheat.value.Jumbobox, optionName)
+                                    optLabel.TextColor3 = ACCENT
+                                    optLabel.Font       = Enum.Font.SourceSansBold
+                                end
+                                jumboSelected.Text = #Cheat.value.Jumbobox .. " Selected"
+                            end)
+                        end
+
+                    end -- fim do if/elseif cheatType
+
+                    return Cheat
+                end -- fim Section:Cheat
+
+                return Section
+            end -- fim InnerTab:Section
+
+            return InnerTab
+        end -- fim Tab:Tab
+
+        tabPage.Parent  = tabsContainer
+        tabButton.Parent = tabButtonsFrame
+
+        return Tab
+    end -- fim Menu:Tab
+
+    return Menu
+end -- fim Library:New
+
+return Library
