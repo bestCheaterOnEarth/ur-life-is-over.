@@ -1264,17 +1264,18 @@ function Library:New()
                     -- ── Slider ────────────────────────────────
                     elseif cheatType == "Slider" then
                         sectionFrame.Size = sectionFrame.Size + UDim2.new(0, 0, 0, 28)
-
-                        local minV    = options.min     or 0
-                        local maxV    = options.max     or 100
-                        local defaultV = options.default or 50
-
+                    
+                        local minV      = options.min     or 0
+                        local maxV      = options.max     or 100
+                        local defaultV  = options.default or 50
+                        local rounding  = options.rounding or 0 -- 0 = Inteiro, 1 = 1.0, 2 = 1.00
+                    
                         local sliderFrame = Instance.new("Frame")
                         sliderFrame.Name               = "Slider"
                         sliderFrame.Parent             = sectionInner
                         sliderFrame.BackgroundTransparency = 1
                         sliderFrame.Size               = UDim2.new(1, 0, 0, 26)
-
+                    
                         local sliderLabel = Instance.new("TextLabel")
                         sliderLabel.Name               = "Label"
                         sliderLabel.Parent             = sliderFrame
@@ -1286,7 +1287,7 @@ function Library:New()
                         sliderLabel.TextColor3         = TEXT_DIM
                         sliderLabel.TextSize           = 14
                         sliderLabel.TextXAlignment     = Enum.TextXAlignment.Left
-
+                    
                         local sliderValue = Instance.new("TextLabel")
                         sliderValue.Name               = "Value"
                         sliderValue.Parent             = sliderFrame
@@ -1294,11 +1295,11 @@ function Library:New()
                         sliderValue.Position           = UDim2.new(0, 119, 0, -2)
                         sliderValue.Size               = UDim2.new(0, 66, 0, 11)
                         sliderValue.Font               = Enum.Font.SourceSans
-                        sliderValue.Text               = tostring(defaultV)
+                        sliderValue.Text               = string.format("%." .. rounding .. "f", defaultV)
                         sliderValue.TextColor3         = TEXT_DIM
                         sliderValue.TextSize           = 14
                         sliderValue.TextXAlignment     = Enum.TextXAlignment.Right
-
+                    
                         local track = Instance.new("TextButton")
                         track.Parent           = sliderFrame
                         track.BackgroundColor3 = BOX_OFF
@@ -1309,41 +1310,48 @@ function Library:New()
                         track.Font             = Enum.Font.SourceSans
                         track.Text             = ""
                         track.Modal            = true
-
+                    
                         local fill = Instance.new("Frame")
                         fill.Name             = "Amount"
                         fill.Parent           = track
                         fill.BackgroundColor3 = ACCENT
                         fill.BorderSizePixel  = 0
                         fill.Size             = UDim2.new(1, 0, 1, 0)
-
+                    
                         Cheat.value = { Slider = defaultV }
-
+                    
                         function Cheat:SetValue(val)
                             Cheat.value = val
-                            local ratio = (val.Slider - minV) / (maxV - minV)
-                            sliderValue.Text = tostring(val.Slider)
+                            local ratio = math.clamp((val.Slider - minV) / (maxV - minV), 0, 1)
+                            sliderValue.Text = string.format("%." .. rounding .. "f", val.Slider)
                             fill.Size = UDim2.new(ratio, 0, 1, 0)
                             callback(val)
                         end
-
+                    
                         Cheat:SetValue(Cheat.value)
-
+                    
                         local mx  = game.Players.LocalPlayer:GetMouse()
                         local UIS = game:GetService("UserInputService")
-
+                    
                         track.MouseButton1Down:Connect(function()
                             Library:Tween(sliderLabel, TWEEN_FAST, { TextColor3 = TEXT_ON })
                             Library:Tween(sliderValue, TWEEN_FAST, { TextColor3 = TEXT_ON })
-
+                    
                             local function update()
-                                fill.Size = UDim2.new(0, math.clamp(mx.X - fill.AbsolutePosition.X, 0, 162), 0, 8)
-                                local v = math.floor((maxV - minV) / 162 * fill.AbsoluteSize.X + minV)
-                                sliderValue.Text        = tostring(v)
+                                local mouseX = math.clamp(mx.X - track.AbsolutePosition.X, 0, 162)
+                                local ratio = mouseX / 162
+                                
+                                -- Cálculo com arredondamento dinâmico
+                                local rawValue = minV + (maxV - minV) * ratio
+                                local power = 10 ^ rounding
+                                local v = math.floor(rawValue * power + 0.5) / power
+                                
+                                fill.Size = UDim2.new(ratio, 0, 1, 0)
+                                sliderValue.Text = string.format("%." .. rounding .. "f", v)
                                 Cheat.value.Slider = v
                                 callback(Cheat.value)
                             end
-
+                    
                             update()
                             local move = mx.Move:Connect(update)
                             local rel
